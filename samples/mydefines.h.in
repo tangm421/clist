@@ -1,0 +1,2 @@
+
+#define INSTALL_BINDIR ${INS_BINDIR}

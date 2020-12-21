@@ -1,0 +1,167 @@
+name: build-and-package
+
+on:
+  #push:
+    #branches: test
+    # Sequence of patterns matched against refs/tags
+    #tags:
+    #  - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  create:
+    ref_type: tag
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  job1:
+    name: Build and Package on Linux
+    runs-on: ubuntu-16.04
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+      with: 
+        ref: ${{github.ref}}
+
+    - name: Create Build Environment
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all subsequent commands
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      # Use a bash shell so we can use the same syntax for environment variable
+      # access regardless of the host operating system
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      # Note the current convention is to use the -S and -B options here to specify source 
+      # and build directories, but this is only available with CMake 3.13 and higher.  
+      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: cmake --build . --config $BUILD_TYPE
+    
+    - name: Package
+      if: ${{ success() }}
+      working-directory: ${{github.workspace}}
+      shell: bash
+      run: |
+        tar -Jcf linux-bin.tar.xz ./bin/
+
+    - name: Upload Artifact for Stage
+      if: ${{ success() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-bin-package
+        path: linux-bin.tar.xz
+        retention-days: 1
+
+  job2:
+    name: Build and Package on Windows
+    runs-on: windows-2019
+
+    steps:
+    - uses: actions/checkout@v2
+      with: 
+        ref: ${{github.ref}}
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+    
+    - name: Package
+      if: ${{ success() }}
+      working-directory: ${{github.workspace}}
+      shell: bash
+      run: |
+        echo zip -r windows-bin.zip ./bin/
+        tar -Jcf windows-bin.tar.xz ./bin/
+
+    - name: Upload Artifact for Stage
+      if: ${{ success() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows-bin-package
+        path: windows-bin.tar.xz
+        retention-days: 1
+
+  job3:
+    name: Create Release and Upload Packages
+    needs: [job1, job2]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Windows Artifacts
+      id: download-artifacts-win
+      uses: actions/download-artifact@v2
+      with:
+        name: windows-bin-package
+
+    - name: Download Linux Artifacts
+      id: download-artifacts-linux
+      uses: actions/download-artifact@v2
+      with:
+        name: linux-bin-package
+
+    - name: Truncate SHA
+      id: truncate-sha
+      uses: tangm421/truncate-sha-action@v1.0
+      #with:
+      #  sha: ${{github.sha}}
+      #  field-width: 7
+
+    - name: Create Release
+      if: ${{ steps.download-artifacts-win.conclusion == 'success' && steps.download-artifacts-linux.conclusion == 'success' && steps.truncate-sha.conclusion=='success' }}
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ github.ref }}-${{steps.truncate-sha.outputs.sha-short}}
+        release_name: ${{ github.ref }}-${{steps.truncate-sha.outputs.sha-short}}
+        body: |
+          # Summary
+          This is a create release demo
+          # Changes in this Release
+          - First Change
+          - Second Change
+        draft: false
+        prerelease: false
+
+    - name: Upload Windows Release Asset
+      id: upload-win-release-asset
+      if: ${{ steps.create_release.conclusion == 'success' }}
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./windows-bin.tar.xz
+        asset_name: windows-bin.tar.xz
+        asset_content_type: application/form
+
+    - name: Upload Linux Release Asset
+      id: upload-linux-release-asset
+      if: ${{ steps.create_release.conclusion == 'success' }}
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./linux-bin.tar.xz
+        asset_name: linux-bin.tar.xz
+        asset_content_type: application/form
+
+    - name: Clean Artifacts
+      uses: geekyeggo/delete-artifact@v1
+      with:
+        name: |
+          windows-bin-package
+          linux-bin-package
+

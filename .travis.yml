@@ -1,0 +1,24 @@
+sudo: required
+language: c
+os: linux
+
+branches:
+  only:
+    - master
+
+jobs:
+  include:
+  - name: cmake
+    script:
+      - echo -------------------------------------------
+      - mkdir build
+      - cd build
+      - cmake ../
+      - make
+  - name: automake
+    script:
+      - echo -------------------------------------------
+      - autoreconf --install
+      - ./configure
+      - make
+  

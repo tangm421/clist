@@ -1,0 +1,47 @@
+
+probe begin {
+    printf("===============begin=============\n")
+}
+
+//记录内存分配和释放的计数关联数组
+global g_mem_ref
+//记录内存分配和释放的调用堆栈关联数组 
+global g_mem_bt
+
+probe process("/lib64/libc.so.6").function("__libc_malloc").return {
+    if(target() == pid()) {
+        if(g_mem_ref[$return] == 0) {
+            g_mem_ref[$return]++
+            g_mem_bt[$return] = sprint_ubacktrace()
+        }
+    }
+}
+
+probe process("/lib64/libc.so.6").function("__libc_free").call {
+    if(target() == pid()) {
+        g_mem_ref[$mem]--
+        if(g_mem_ref[$mem] == 0) {
+            if($mem != 0) {
+                //记录上次释放的调用堆栈 
+                g_mem_bt[$mem] = sprint_ubacktrace()
+            }
+        } else if(g_mem_ref[$mem] < 0 && $mem != 0) {
+            //如果调用free已经失衡，那就出现了重复释放内存的问题，这里输出当前调用堆栈，以及这个地址上次释放的调用堆栈
+            printf("MMMMMMMMMMMMMMMMMMMMMMMMMMMM\n")
+            printf("g_mem_ref[%p]: %d\n", $mem, g_mem_ref[$mem])
+            print_ubacktrace()
+            printf("last free backtrace:\n%s\n", g_mem_bt[$mem])
+            printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWW\n")
+        }
+    }
+}
+
+probe end {
+    //最后输出产生泄漏的内存是在哪里分配的
+    printf("===============end=============\n")
+    foreach(mem in g_mem_ref) {
+        if (g_mem_ref[mem] > 0) {
+            printf("%s\n", g_mem_bt[mem])
+        }
+    }
+}
