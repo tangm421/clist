@@ -1,5 +1,7 @@
 # 1. clist
 
+
+
 A simple test project for study
 
 - how to use cmake
@@ -12,4 +14,11 @@ A simple test project for study
 
 ---
 
+<div align="center">
+
+![build-and-package](https://github.com/tangm421/clist/workflows/build-and-package/badge.svg)  [![Travis (.com) branch](https://img.shields.io/travis/com/tangm421/clist/master?logo=Travis)](https://travis-ci.com/tangm421/clist)
+
+
 [![Website](https://img.shields.io/website?down_message=offline&label=explore%20my%20blog&logo=Internet%20Explorer&style=for-the-badge&up_message=online&url=https%3A%2F%2Fblog.luanhui.cf "Welcome to my blog")](https://blog.luanhui.cf)
+
+</div>
