@@ -18,7 +18,6 @@ A simple test project for study
 
 ![build-and-package](https://github.com/tangm421/clist/workflows/build-and-package/badge.svg)  [![Travis (.com) branch](https://img.shields.io/travis/com/tangm421/clist/master?logo=Travis)](https://travis-ci.com/tangm421/clist)
 
-
-[![Website](https://img.shields.io/website?down_message=offline&label=explore%20my%20blog&logo=Internet%20Explorer&style=for-the-badge&up_message=online&url=https%3A%2F%2Fblog.luanhui.cf "Welcome to my blog")](https://blog.luanhui.cf)
+[![Website](https://img.shields.io/website?down_color=lightgrey&down_message=offline&label=MY%20BLOG&logo=internet%20explorer&style=for-the-badge&up_color=green&up_message=online&url=https%3A%2F%2Fcnblogs.luanhui.cf "Welcome to my blog")](https://cnblogs.luanhui.cf)
 
 </div>
